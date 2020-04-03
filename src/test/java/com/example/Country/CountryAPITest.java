@@ -14,8 +14,8 @@ public class CountryAPITest {
 
     @Test
     public void countryTest() throws JsonProcessingException {
-        System.out.println(countryAPI.getCountryName("lk"));
+        /*System.out.println(countryAPI.getCountryName("lk"));
         System.out.println(countryAPI.getCountryName("LK"));
-        System.out.println(countryAPI.getCountryName("uzk"));
+        System.out.println(countryAPI.getCountryName("uzk"));*/
     }
 }

@@ -18,13 +18,13 @@ public class UnzipTest {
 
     @Test
     void unzip() throws ZipException {
-        System.out.println("Started unzipping");
+       /* System.out.println("Started unzipping");
         countryService.unzip("src/main/resources/example.zip");
-        System.out.println("Stopped unzipping");
+        System.out.println("Stopped unzipping");*/
     }
 
     @Test
     void readFile() throws FileNotFoundException {
-        countryService.listFileInFolder();
+        //countryService.listFileInFolder();
     }
 }

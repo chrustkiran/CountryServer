@@ -1,30 +1,30 @@
 package com.example.Country;
 
-import com.example.Country.service.CountryService;
+import com.example.Country.service.Unzipper;
 import net.lingala.zip4j.exception.ZipException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.io.FileNotFoundException;
-
-import static org.assertj.core.api.Assertions.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 public class UnzipTest {
 
-    @Autowired
-    CountryService countryService;
+   @Autowired
+   Unzipper unzipper;
+
+
+    @Value("${extract.destination}")
+    private String destination;
 
     @Test
     void unzip() throws ZipException {
-       /* System.out.println("Started unzipping");
-        countryService.unzip("src/main/resources/example.zip");
-        System.out.println("Stopped unzipping");*/
+     unzipper.unzip("example1.zip");
+     assertThat(Files.exists(Paths.get(destination +"example1"))).isTrue();
     }
 
-    @Test
-    void readFile() throws FileNotFoundException {
-        //countryService.listFileInFolder();
-    }
 }

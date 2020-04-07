@@ -1,17 +1,19 @@
 package com.example.Country.controller;
 
-import com.example.Country.dto.MessageDTO;
 import com.example.Country.model.CountryInfo;
 import com.example.Country.service.CountryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.util.List;
+
+import java.io.IOException;
+import java.nio.file.*;
 
 @CrossOrigin
 @RestController
@@ -19,32 +21,23 @@ public class CountryController {
     @Autowired
     CountryService countryService;
 
-    @GetMapping("/getAllCountyInfo")
-    public List<CountryInfo> getAllCountryInfo() {
-        return countryService.getAllCountryInfo();
-    }
-
-    @GetMapping("/process")
-    public MessageDTO process(@RequestParam(value = "zipname") String zipname) {
-        MessageDTO messageDTO = new MessageDTO();
-        try {
-            countryService.unzip(zipname);
-            countryService.listFileInFolder();
-            messageDTO.setMessage("Processed");
-            return messageDTO;
-        } catch (Exception e) {
-            messageDTO.setMessage(e.getMessage());
-            return messageDTO;
+    @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_STREAM_JSON_VALUE)
+    public Flux<CountryInfo> process(@RequestPart("file") FilePart filePart) throws IOException {
+        if(!filePart.filename().split("\\.")[1].equals("zip")){
+            return Flux.error(new Throwable("Please upload a zip"));
         }
+        return countryService.process(filePart).onErrorResume(
+                throwable -> Flux.error(new Throwable())
+        );
     }
 
     @GetMapping("/deleteAll")
-    public String deleteAll() {
+    public ResponseEntity deleteAll() {
         try {
             countryService.deleteAll();
-            return "All entries have been deleted";
+            return new ResponseEntity(HttpStatus.OK);
         } catch (Exception e) {
-            return "Error " + e.getMessage();
+            return new ResponseEntity(HttpStatus.EXPECTATION_FAILED);
         }
     }
 

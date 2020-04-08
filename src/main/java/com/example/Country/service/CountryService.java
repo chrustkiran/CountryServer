@@ -8,6 +8,6 @@ import reactor.core.publisher.Mono;
 import java.io.IOException;
 
 public interface CountryService {
-     Flux<CountryInfo> process(FilePart filePart) throws IOException;
+     Flux<CountryInfo> process(FilePart filePart) throws IOException, InterruptedException;
      void deleteAll();
 }

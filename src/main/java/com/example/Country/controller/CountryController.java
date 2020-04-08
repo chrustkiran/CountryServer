@@ -21,8 +21,8 @@ public class CountryController {
     @Autowired
     CountryService countryService;
 
-    @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_STREAM_JSON_VALUE)
-    public Flux<CountryInfo> process(@RequestPart("file") FilePart filePart) throws IOException {
+    @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Flux<CountryInfo> process(@RequestPart("file") FilePart filePart) throws IOException, InterruptedException {
         if(!filePart.filename().split("\\.")[1].equals("zip")){
             return Flux.error(new Throwable("Please upload a zip"));
         }

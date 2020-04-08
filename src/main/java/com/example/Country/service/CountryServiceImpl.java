@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Date;
 import java.util.Scanner;
 
@@ -39,11 +40,13 @@ public class CountryServiceImpl implements CountryService {
     @Value("${extract.destination}")
     private String destination;
 
-    @Override
-    public Flux<CountryInfo> process(FilePart filePart) throws IOException {
-        fileUploader.upload(filePart).doOnComplete(() -> {
-            System.out.println("Finished uploading");
+    @Value("${delay}")
+    private long delay;
 
+    @Override
+    public Flux<CountryInfo> process(FilePart filePart) throws IOException, InterruptedException {
+        fileUploader.upload(filePart).doOnComplete(() -> {
+            logger.info("Finished uploading " + filePart.filename());
             try {
                 unzipper.unzip(filePart.filename());
                 processFile(filePart.filename());
@@ -53,8 +56,7 @@ public class CountryServiceImpl implements CountryService {
                 e.printStackTrace();
             }
         }).doOnError(error -> logger.error("Error uploading file ", error)).subscribe();
-        return getAllCountryInfoByname(filePart.filename());
-
+        return getAllCountryInfoByname(filePart.filename()).delaySubscription(Duration.ofMillis(delay));
     }
 
     private void save(CountryInfo countryInfo) {
@@ -67,12 +69,13 @@ public class CountryServiceImpl implements CountryService {
     }
 
     private Flux<CountryInfo> getAllCountryInfoByname(String filename) {
+        logger.info("fetching...");
         return countryInfoRepository.findByZipFileName(filename);
     }
 
     @Override
     public void deleteAll() {
-        countryInfoRepository.deleteAll();
+        countryInfoRepository.deleteAll().subscribe();
     }
 
 
@@ -92,15 +95,15 @@ public class CountryServiceImpl implements CountryService {
             String folderName = zipFilename.split("\\.")[0];
             File extractedFolder = new File(destination + folderName);
             for (final File textFile : extractedFolder.listFiles()) {
-                logger.info("Started processing ", textFile.getName());
+                logger.info("Started processing " + textFile.getName());
                 boolean noContent = true;
                 Scanner scanner = new Scanner(textFile);
                 while (scanner.hasNextLine()) {
                     noContent = false;
                     String line = scanner.nextLine();
                     countryClient.getCountryName(line).doOnSuccess(
-                            x -> {
-                                CountryInfo countryInfo = composeCountryInfo(zipFilename, textFile.getName(), line, x.get("name").toString(), "SUCCESS");
+                            res -> {
+                                CountryInfo countryInfo = composeCountryInfo(zipFilename, textFile.getName(), line, res.get("name").toString(), "SUCCESS");
                                 save(countryInfo);
                             }
                     ).doOnError(

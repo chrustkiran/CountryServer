@@ -27,7 +27,7 @@ public class FileUploaderImpl implements FileUploader {
     private String destination;
 
     @Override
-    public Flux<DataBuffer> upload(FilePart filePart) throws IOException {
+    public Mono<String> upload(FilePart filePart) throws IOException {
 
         final Mono<String> monoString = Mono.empty();
         Path path = Paths.get(destination+filePart.filename());
@@ -36,6 +36,7 @@ public class FileUploaderImpl implements FileUploader {
         }
         AsynchronousFileChannel channel =
                 AsynchronousFileChannel.open(path, StandardOpenOption.WRITE);
-        return DataBufferUtils.write(filePart.content(), channel, 0);
+        return DataBufferUtils.write(filePart.content(), channel, 0)
+                .then(Mono.just(filePart.filename()));
     }
 }

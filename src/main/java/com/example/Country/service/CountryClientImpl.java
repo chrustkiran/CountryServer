@@ -20,11 +20,15 @@ public class CountryClientImpl implements CountryClient {
     private WebClient client = WebClient.create();
 
     @Override
-    public Mono<TypedMap> getCountryName(String countryCode) {
+    public Mono<String> getCountryName(String countryCode) {
         return client.get()
                 .uri(countryAPIURL + countryCode)
                 .retrieve()
-                .bodyToMono(TypedMap.class);
+                .bodyToMono(TypedMap.class).map(
+                        typedMap -> {
+                            return typedMap.get("name").toString();
+                        }
+                );
     }
 
     public static class TypedMap extends HashMap<String, Object> {

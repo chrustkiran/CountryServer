@@ -1,5 +1,6 @@
 package com.example.Country.controller;
 
+import com.example.Country.dto.Constants;
 import com.example.Country.model.CountryInfo;
 import com.example.Country.service.CountryService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,11 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.time.Duration;
 
 @CrossOrigin
 @RestController
@@ -21,14 +21,19 @@ public class CountryController {
     @Autowired
     CountryService countryService;
 
-    @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_STREAM_JSON_VALUE)
     public Flux<CountryInfo> process(@RequestPart("file") FilePart filePart) throws IOException, InterruptedException {
-        if(!filePart.filename().split("\\.")[1].equals("zip")){
-            return Flux.error(new Throwable("Please upload a zip"));
+        if (!filePart.filename().split("\\.")[1].equals("zip")) {
+            return Flux.error(new Throwable(Constants.UPLOAD_ZIP));
         }
         return countryService.process(filePart).onErrorResume(
-                throwable -> Flux.error(new Throwable())
-        );
+                throwable -> Flux.error(throwable)
+       );
+    }
+
+    @GetMapping(value = "/test", produces = MediaType.APPLICATION_STREAM_JSON_VALUE)
+    public Flux<Integer> test() {
+        return Flux.range(0, 10).delayElements(Duration.ofSeconds(1));
     }
 
     @GetMapping("/deleteAll")

@@ -1,5 +1,6 @@
 package com.example.Country.service;
 
+import com.example.Country.dto.Constants;
 import com.example.Country.model.CountryInfo;
 import com.example.Country.repositories.CountryInfoRepository;
 import net.lingala.zip4j.exception.ZipException;
@@ -11,14 +12,11 @@ import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.time.Duration;
-import java.util.Date;
-import java.util.Scanner;
+import java.util.*;
 
 @Service
 public class CountryServiceImpl implements CountryService {
@@ -40,23 +38,23 @@ public class CountryServiceImpl implements CountryService {
     @Value("${extract.destination}")
     private String destination;
 
-    @Value("${delay}")
-    private long delay;
-
     @Override
     public Flux<CountryInfo> process(FilePart filePart) throws IOException, InterruptedException {
-        fileUploader.upload(filePart).doOnComplete(() -> {
-            logger.info("Finished uploading " + filePart.filename());
-            try {
-                unzipper.unzip(filePart.filename());
-                processFile(filePart.filename());
-            } catch (ZipException e) {
-                e.printStackTrace();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-        }).doOnError(error -> logger.error("Error uploading file ", error)).subscribe();
-        return getAllCountryInfoByname(filePart.filename()).delaySubscription(Duration.ofMillis(delay));
+
+        return fileUploader.upload(filePart).flatMapMany(
+                fileName -> {
+                    try {
+                        unzipper.unzip(fileName);
+                        return processFile(fileName);
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                        return Flux.error(new Throwable(Constants.FILE_NOT_FOUND));
+                    } catch (ZipException e) {
+                        e.printStackTrace();
+                        return Flux.error(new Throwable(Constants.UNZIPPING_ERROR));
+                    }
+                }
+        );
     }
 
     private void save(CountryInfo countryInfo) {
@@ -90,45 +88,55 @@ public class CountryServiceImpl implements CountryService {
         return countryInfo;
     }
 
-    private void processFile(String zipFilename) throws FileNotFoundException {
-        try {
-            String folderName = zipFilename.split("\\.")[0];
-            File extractedFolder = new File(destination + folderName);
-            for (final File textFile : extractedFolder.listFiles()) {
-                logger.info("Started processing " + textFile.getName());
-                boolean noContent = true;
-                Scanner scanner = new Scanner(textFile);
-                while (scanner.hasNextLine()) {
-                    noContent = false;
-                    String line = scanner.nextLine();
-                    countryClient.getCountryName(line).doOnSuccess(
-                            res -> {
-                                CountryInfo countryInfo = composeCountryInfo(zipFilename, textFile.getName(), line, res.get("name").toString(), "SUCCESS");
-                                save(countryInfo);
-                            }
-                    ).doOnError(
-                            throwable -> {
-                                if (throwable instanceof WebClientResponseException) {
-                                    CountryInfo countryInfo = composeCountryInfo(zipFilename, textFile.getName(), line, "", "NO_SUCH_COUNTRY");
-                                    save(countryInfo);
-                                } else {
-                                    CountryInfo countryInfo = composeCountryInfo(zipFilename, textFile.getName(), line, "", "ERROR");
-                                    save(countryInfo);
-                                }
-                            }
-                    ).subscribe();
-                }
-                if (noContent) {
-                    logger.info(textFile.getName() + " has no content");
-                    CountryInfo countryInfo = composeCountryInfo(zipFilename, textFile.getName(), "", "", "NO_CONTENT");
+    private Flux<CountryInfo> processFile(String zipFilename) throws FileNotFoundException {
+        String folderName = zipFilename.split("\\.")[0];
+        File extractedFolder = new File(destination + folderName);
+        List<File> files = Arrays.asList(extractedFolder.listFiles());
+        return Flux.fromIterable(files).flatMap(file -> {
+            ArrayList lines;
+            try {
+                lines = convertFileToList(file);
+                if (lines.size() == 0) {
+                    logger.info("no content in "+file.getName());
+                    CountryInfo countryInfo = composeCountryInfo(zipFilename, file.getName(), " ", " ", Constants.NO_CONTENT);
                     save(countryInfo);
+                    return Flux.just(countryInfo);
                 }
+                return Flux.fromIterable(lines).map(line -> {
+                    try {
+                        String countryName = countryClient.getCountryName(line.toString()).block();
+                        CountryInfo countryInfo = composeCountryInfo(zipFilename, file.getName(), line.toString(), countryName, Constants.SUCCESS);
+                        save(countryInfo);
+                        return countryInfo;
+                    } catch (WebClientResponseException e) {
+                        CountryInfo countryInfo = composeCountryInfo(zipFilename, file.getName(), line.toString(), " ", Constants.NO_SUCH_COUNTRY);
+                        save(countryInfo);
+                        return countryInfo;
+                    }
+                });
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                CountryInfo countryInfo = composeCountryInfo(zipFilename, file.getName(), "", "", Constants.ERROR);
+                save(countryInfo);
+                return Flux.error(new Throwable(Constants.ERROR));
             }
+        });
 
-        } catch (
-                FileNotFoundException e) {
-            throw e;
+    }
+
+    private ArrayList<String> convertFileToList(File file) throws FileNotFoundException {
+        logger.info("reading "+file.getName());
+        Scanner scanner;
+        ArrayList lines = new ArrayList();
+        try {
+            scanner = new Scanner(file);
+            while (scanner.hasNextLine()) {
+                lines.add(scanner.nextLine());
+            }
+        } catch (FileNotFoundException fileNotFountException) {
+            fileNotFountException.printStackTrace();
+            throw fileNotFountException;
         }
-
+        return lines;
     }
 }

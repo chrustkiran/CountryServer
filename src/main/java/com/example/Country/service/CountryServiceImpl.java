@@ -62,7 +62,8 @@ public class CountryServiceImpl implements CountryService {
     }
 
 
-    private Flux<CountryInfo> getAllCountryInfo() {
+    @Override
+    public Flux<CountryInfo> getAllCountryInfo() {
         return countryInfoRepository.findAll();
     }
 

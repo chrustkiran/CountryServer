@@ -10,4 +10,5 @@ import java.io.IOException;
 public interface CountryService {
      Flux<CountryInfo> process(FilePart filePart) throws IOException, InterruptedException;
      void deleteAll();
+     Flux<CountryInfo> getAllCountryInfo();
 }

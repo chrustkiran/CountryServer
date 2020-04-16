@@ -64,7 +64,11 @@ public class CountryServiceImpl implements CountryService {
 
     @Override
     public Flux<CountryInfo> getAllCountryInfo() {
-        return countryInfoRepository.findAll();
+        return countryInfoRepository.findAll().doAfterTerminate(
+                () -> {
+                    this.deleteAll();
+                }
+        );
     }
 
     private Flux<CountryInfo> getAllCountryInfoByname(String filename) {
@@ -98,7 +102,7 @@ public class CountryServiceImpl implements CountryService {
             try {
                 lines = convertFileToList(file);
                 if (lines.size() == 0) {
-                    logger.info("no content in "+file.getName());
+                    logger.info("no content in " + file.getName());
                     CountryInfo countryInfo = composeCountryInfo(zipFilename, file.getName(), " ", " ", Constants.NO_CONTENT);
                     save(countryInfo);
                     return Flux.just(countryInfo);
@@ -126,7 +130,7 @@ public class CountryServiceImpl implements CountryService {
     }
 
     private ArrayList<String> convertFileToList(File file) throws FileNotFoundException {
-        logger.info("reading "+file.getName());
+        logger.info("reading " + file.getName());
         Scanner scanner;
         ArrayList lines = new ArrayList();
         try {

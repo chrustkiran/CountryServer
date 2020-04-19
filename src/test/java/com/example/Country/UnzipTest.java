@@ -17,14 +17,10 @@ public class UnzipTest {
    @Autowired
    Unzipper unzipper;
 
-
-    @Value("${extract.destination}")
-    private String destination;
-
     @Test
     void unzip() throws ZipException {
      unzipper.unzip("example1.zip");
-     assertThat(Files.exists(Paths.get(destination +"example1"))).isTrue();
+     assertThat(Files.exists(Paths.get("example1"))).isTrue();
     }
 
 }

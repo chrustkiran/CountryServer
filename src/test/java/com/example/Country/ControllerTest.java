@@ -32,11 +32,7 @@ import reactor.core.publisher.Flux;
 
 import java.net.MalformedURLException;
 
-/*
-@WebFluxTest(controllers = CountryController.class)
-@Import({CountryServiceImpl.class, CountryClientImpl.class, UnzipperImpl.class, FileUploaderImpl.class, CountryInfoRepository.class})*/
 @ExtendWith(SpringExtension.class)
-//  We create a `@SpringBootTest`, starting an actual server on a `RANDOM_PORT`
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class ControllerTest {
 

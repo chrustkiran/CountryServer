@@ -27,14 +27,14 @@ public class CountryClientTest {
 
     @Test
     public void countrySuccessTest() throws JsonProcessingException {
-        //String countryName = countryClient.getCountryName("LK").block().get("name").toString();
-        //assertThat(countryName).isEqualTo("Sri Lanka");
+        String countryName = countryClient.getCountryName("LK").block();
+        assertThat(countryName).isEqualTo("Sri Lanka");
     }
 
     @Test
     public void countryFailureTest() throws JsonProcessingException {
         try {
-            //String countryName = countryClient.getCountryName("ZZ").block().get("name").toString();
+            String countryName = countryClient.getCountryName("ZZ").block();
         } catch (Exception e){
             assertThat(e).isInstanceOf(WebClientResponseException.class);
         }
